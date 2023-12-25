@@ -34,7 +34,7 @@ async function run() {
         // Connect the client to the server	(optional starting in v4.7)
         // await client.connect();
         const AllUsersCollection = client.db('TaskManage').collection('Users');
-        const AllTaskSheetCollection = client.db('HRMS').collection('TaskSheet');
+        const AllTaskSheetCollection = client.db('TaskManage').collection('TaskSheet');
         // jwt for locastorage
         app.post('/jwt', async (req, res) => {
             const user = req.body;
@@ -80,7 +80,7 @@ async function run() {
 
 
 
-        app.get('/users', verifyToken, async (req, res) => {
+        app.get('/users', async (req, res) => {
             const cursor = AllUsersCollection.find();
             const result = await cursor.toArray();
             res.send(result);
@@ -110,19 +110,70 @@ async function run() {
         })
 
 
-        app.get('/tasksheet/:email', async (req, res) => {
+        app.get('/tasksheet', async (req, res) => {
+            const result = await AllTaskSheetCollection.find().toArray();
+            res.send(result);
+        })
+
+        app.get('/tasksheet/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) }
+            const result = await AllTaskSheetCollection.findOne(query);
+            res.send(result);
+        })
+        app.get('/tasksheett/:email', async (req, res) => {
             const email = req.params.email;
-            // console.log(role);
             const query = { email: email }
             const result = await AllTaskSheetCollection.find(query).toArray();
             res.send(result);
         })
 
+        app.get('/tasksheett/todo/:email', async (req, res) => {
+            const status = 'todo';
+            const email = req.params.email;
+            const query = { Status: status, email: email }
 
-        app.get('/tasksheet/:email/:id', async (req, res) => {
-            const id = req.params.id;
-            const query = { _id: new ObjectId(id) }
-            const result = await AllTaskSheetCollection.findOne(query);
+            const result = await AllTaskSheetCollection.find(query).toArray();
+            console.log(result, query, email, status);
+            const priorityOrder = {
+                High: 1,
+                Moderate: 2,
+                Low: 3,
+            };
+            result.sort((taskA, taskB) => {
+                const priorityA = priorityOrder[taskA.priority];
+                const priorityB = priorityOrder[taskB.priority];
+
+                return priorityA - priorityB;
+            });
+            res.send(result);
+        })
+
+
+
+        app.get('/tasksheett/ongoing/:email', async (req, res) => {
+            const status = 'ongoing';
+            const email = req.params.email;
+            const query = { Status: status, email: email }
+            const result = await AllTaskSheetCollection.find(query).toArray();
+            const priorityOrder = {
+                High: 1,
+                Moderate: 2,
+                Low: 3,
+            };
+            result.sort((taskA, taskB) => {
+                const priorityA = priorityOrder[taskA.priority];
+                const priorityB = priorityOrder[taskB.priority];
+
+                return priorityA - priorityB;
+            });
+            res.send(result);
+        })
+        app.get('/tasksheett/finished/:email', async (req, res) => {
+            const status = 'finished';
+            const email = req.params.email;
+            const query = { Status: status, email: email }
+            const result = await AllTaskSheetCollection.find(query).toArray();
             res.send(result);
         })
 
@@ -134,34 +185,72 @@ async function run() {
             res.send(result);
         })
 
-        app.put('/tasksheet/:id', async (req, res) => {
+        app.put('/tasksheet/:id/read', async (req, res) => {
             const id = req.params.id;
             const filter = { _id: new ObjectId(id) }
             const option = { upsert: true }
-            const updateTask = req.body;
             const task = {
                 $set: {
-                    name: updateTask.name,
-                    email: updateTask.email,
-                    empId: updateTask.empId,
-                    category: updateTask.category,
-                    hours: updateTask.hours,
-                    overtime: updateTask.overtime,
-                    note: updateTask.note,
-                    date: updateTask.date,
-                    mainSalary: updateTask.mainSalary,
-                    overtimeSalary: updateTask.overtimeSalary,
-
-
+                    Read: 'old',
                 }
             }
 
             const result = await AllTaskSheetCollection.updateOne(filter, task, option);
-            console.log(updateTask);
+            console.log(result);
             res.send(result);
+        });
 
+        app.put('/tasksheet/:id/start', async (req, res) => {
+            const id = req.params.id;
+            const filter = { _id: new ObjectId(id) }
+            const option = { upsert: true }
+            const task = {
+                $set: {
+                    Status: 'ongoing',
+                }
+            }
+
+            const result = await AllTaskSheetCollection.updateOne(filter, task, option);
+            console.log(req.body);
+            res.send(result);
+        });
+        app.put('/tasksheet/:id/ongoing', async (req, res) => {
+            const id = req.params.id;
+            const filter = { _id: new ObjectId(id) }
+            const option = { upsert: true }
+            const task = {
+                $set: {
+                    Status: 'finished',
+                }
+            }
+
+            const result = await AllTaskSheetCollection.updateOne(filter, task, option);
+            console.log(req.body);
+            res.send(result);
+        });
+        app.put('/tasksheet/:id', async (req, res) => {
+            const id = req.params.id;
+            const updateTask = req.body;
+            console.log(updateTask);
+            const filter = { _id: new ObjectId(id) }
+            const option = { upsert: true }
+            const task = {
+                $set: {
+                    desc: updateTask.desc,
+                }
+            }
+
+            const result = await AllTaskSheetCollection.updateOne(filter, task, option);
+            // console.log(req.body);
+            res.send(result);
+        });
+
+        app.delete('/tasksheet/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) };
+            const result = await AllTaskSheetCollection.deleteOne(query);
+            res.send(result);
         })
-
 
 
         // Send a ping to confirm a successful connection
